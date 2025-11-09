@@ -1,6 +1,7 @@
 import mongoose, {Schema, model, models} from "mongoose";
 import bcrypt from "bcryptjs";
 
+// file for user model definition
 export interface IUser {
     email : string
     password : string

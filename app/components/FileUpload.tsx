@@ -7,6 +7,7 @@ import {
     ImageKitUploadNetworkError,
     upload,
 } from "@imagekit/next";
+import { set } from "mongoose";
 import { useRef, useState } from "react";
 
 
@@ -36,14 +37,51 @@ const FileUpload = ({
         return true
     }
 
+    const handleFileChange = async (e : React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+
+        if(!file || !validateFile(file)) return
+
+        setUploading(true);
+        setError(null)
+        try {
+            const authRes = await fetch("api/auth/imagekit-auth")
+            const auth = await authRes.json()
+
+            const res = await upload({
+                 file,
+                 fileName: file.name,
+                 publicKey: process.env.NEXT_PUBLIC_PUBLIC_KEY!,
+                 signature: auth.signature,
+                 token: auth.token,
+                 expire: auth.expire,
+
+                onProgress: (event) => {
+                    if(event.lengthComputable && onProgress){
+                        const percent = (event.loaded / event.total) * 100;
+                        onProgress(Math.round(percent))
+                    }
+                },
+            })
+            onSuccess(res)
+
+        } catch (error) {
+            console.error("Upload failed:", error);
+        } finally {
+            setUploading(false);
+        }
+    }
+
     return (
         <>
-            <input type="file" ref={fileInputRef} />
-            <button type="button" onClick={handleUpload}>
-                Upload file
-            </button>
-            <br />
-            Upload progress: <progress value={progress} max={100}></progress>
+            <input 
+            type="file"
+            accept={fileType === "video" ? "video/*" : "image/*"}
+            onChange={handleFileChange}
+             />
+             {uploading && (
+                <span>Loading...</span>
+             )}
         </>
     );
 };
